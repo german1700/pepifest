@@ -682,17 +682,45 @@
       const audio = useAudio();
 
       // ESTA ES LA PARTE MAGICA: Conexión en vivo
+// ==============================================
+      // EFECTO CORREGIDO: Insiste hasta conectar
+      // ==============================================
       useEffect(() => {
-        // Verificamos si el script de Firebase cargó bien
-        if (window.escucharInvitados) {
-          // Nos suscribimos: cada vez que cambie la base de datos, esto se ejecuta
-          const detenerEscucha = window.escucharInvitados((nuevosDatos) => {
-            setGuests(nuevosDatos);
-          });
-          
-          // Limpieza al cerrar
-          return () => detenerEscucha();
+        const intentarConexion = () => {
+          // Si Firebase ya llegó...
+          if (window.escucharInvitados) {
+            console.log("¡Conexión exitosa! Escuchando cambios...");
+            // Conectamos el contador y la lista
+            const detener = window.escucharInvitados((nuevosDatos) => {
+              setGuests(nuevosDatos);
+            });
+            return detener; // Guardamos la función para limpiar después
+          }
+          return null; // Aún no está listo
+        };
+
+        // 1. Intento inmediato
+        let cleanup = intentarConexion();
+
+        // 2. Si falló, reintentamos cada medio segundo (Polling)
+        if (!cleanup) {
+          const intervalo = setInterval(() => {
+            cleanup = intentarConexion();
+            if (cleanup) {
+              clearInterval(intervalo); // ¡Ya conectó! Dejamos de insistir
+            }
+          }, 500);
+
+          // Limpieza si el usuario cierra la página antes de conectar
+          return () => {
+            clearInterval(intervalo);
+            if (cleanup) cleanup();
+          };
         }
+
+        return () => {
+          if (cleanup) cleanup();
+        };
       }, []);
 
       const handleEnter = () => {
