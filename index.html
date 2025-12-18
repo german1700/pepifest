@@ -50,7 +50,52 @@
 </head>
 <body>
   <div id="root"></div>
-  
+  <script type="module">
+    // Importamos las herramientas de Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // 1. CONFIGURACIÓN (Copia esto de tu consola de Firebase)
+    const firebaseConfig = {
+      apiKey: "AIzaSyAAw8z9fWBrtVtzI-Wk0lIRBE4vIU7cpE8",
+      authDomain: "pepifest-f86de.firebaseapp.com",
+      projectId: "pepifest-f86de",
+      storageBucket: "pepifest-f86de.firebasestorage.app",
+      messagingSenderId: "87814325064",
+      appId: "1:87814325064:web:690c12bc4bcd4ace3a697d"
+    };
+
+    // 2. INICIALIZAR
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // 3. CREAR FUNCIONES GLOBALES (Para que React las pueda usar)
+    
+    // Función para guardar invitado
+    window.guardarInvitado = async (nombre) => {
+      try {
+        await addDoc(collection(db, "asistentes"), {
+          nombre: nombre,
+          fecha: new Date().toISOString() // Guardamos fecha y hora
+        });
+        console.log("Invitado guardado en la nube");
+      } catch (e) {
+        console.error("Error guardando: ", e);
+        alert("Hubo un error al conectar con la base de datos.");
+        throw e;
+      }
+    };
+
+    // Función para escuchar cambios en vivo (Contador real)
+    window.escucharInvitados = (callback) => {
+      const q = query(collection(db, "asistentes"), orderBy("fecha", "asc"));
+      // onSnapshot se ejecuta cada vez que alguien se registra en cualquier lugar
+      return onSnapshot(q, (snapshot) => {
+        const lista = snapshot.docs.map(doc => doc.data());
+        callback(lista); // Le enviamos la lista nueva a React
+      });
+    };
+  </script>
   <script type="text/babel">
     const { useState, useEffect, useRef, useCallback } = React;
 
