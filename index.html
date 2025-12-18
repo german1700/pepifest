@@ -670,18 +670,29 @@
     // ============================================
     // MAIN APP
     // ============================================
+   // ============================================
+    // MAIN APP (MODIFICADA PARA FIREBASE)
+    // ============================================
     function App() {
       const [currentScreen, setCurrentScreen] = useState('entry');
       const [showModal, setShowModal] = useState(false);
-      const [guests, setGuests] = useState([]);
+      const [guests, setGuests] = useState([]); // Empieza vacía, Firebase la llenará
       const [mainVisible, setMainVisible] = useState(false);
       
       const audio = useAudio();
 
+      // ESTA ES LA PARTE MAGICA: Conexión en vivo
       useEffect(() => {
-        // Load guests from localStorage
-        const saved = localStorage.getItem('pepifest-guests');
-        if (saved) setGuests(JSON.parse(saved));
+        // Verificamos si el script de Firebase cargó bien
+        if (window.escucharInvitados) {
+          // Nos suscribimos: cada vez que cambie la base de datos, esto se ejecuta
+          const detenerEscucha = window.escucharInvitados((nuevosDatos) => {
+            setGuests(nuevosDatos);
+          });
+          
+          // Limpieza al cerrar
+          return () => detenerEscucha();
+        }
       }, []);
 
       const handleEnter = () => {
@@ -695,10 +706,16 @@
         setTimeout(() => setMainVisible(true), 100);
       };
 
+      // GUARDAR EN LA NUBE
       const handleConfirmation = async (name) => {
-        const newGuests = [...guests, { name, timestamp: new Date().toISOString() }];
-        setGuests(newGuests);
-        localStorage.setItem('pepifest-guests', JSON.stringify(newGuests));
+        if (window.guardarInvitado) {
+           // Llamamos a la función global de Firebase
+           await window.guardarInvitado(name);
+           // Nota: No necesitamos hacer setGuests aquí, 
+           // porque el "escuchador" de arriba detectará el cambio y actualizará solo.
+        } else {
+           alert("Error: Base de datos no conectada");
+        }
       };
 
       const openMaps = () => window.open(CONFIG.googleMapsUrl, '_blank');
@@ -856,6 +873,7 @@
                   <div className="absolute inset-0 rounded-full bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 opacity-0 group-hover:opacity-50 transition-opacity blur-xl"></div>
                 </button>
 
+                {/* CONTADOR DE INVITADOS (CONECTADO A FIREBASE) */}
                 {guests.length > 0 && (
                   <div className="mt-6 px-4 py-2 rounded-full bg-gradient-to-r from-pink-500/10 to-purple-500/10 border border-pink-500/20">
                     <p className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-cyan-400 text-xs font-bold">
